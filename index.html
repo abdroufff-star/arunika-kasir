@@ -1411,6 +1411,33 @@
       cloudSave("orders", id, state.orders[idx]);
       renderOrders();
       showToast(`Status diubah ke ${status}`);
+
+      // Munculkan opsi kirim WA pemberitahuan saat status diubah ke Selesai
+      if (status === "Selesai") {
+        const o = state.orders[idx];
+        setTimeout(() => {
+          const konfirmasi = confirm(`Order ${o.id} (${o.customerName}) sudah SELESAI.\n\nKirim pesan WA pemberitahuan ke pelanggan sekarang?`);
+          if (konfirmasi) {
+            sendWAReady(o.id);
+          }
+        }, 200);
+      }
+    };
+
+    // Pesan WA khusus pemberitahuan Order Selesai (tanpa menampilkan rincian Ongkos Desain)
+    window.sendWAReady = (id) => {
+      const o = state.orders.find(x => x.id === id);
+      if (!o) return;
+      const wa = normWa(o.customerWa);
+      const remain = Math.max(0, (o.total || 0) - (o.dp || 0));
+      const itemsText = (o.items || []).map(i => `- ${i.name} (${i.desc})`).join("\n");
+      const infoBayar = remain > 0
+        ? `\n*Sisa Tagihan:* ${fmtRp(remain)}\n\n*Pembayaran (a.n Abdur Rouf):*\n• BCA: 3301144677\n• BRI: 628801016232530\n• QRIS tersedia\n`
+        : `\n*Status Bayar:* LUNAS ✅\n`;
+
+      const msg = `Halo *${o.customerName}*,\nKabar baik! Pesanan Anda di *ARUNIKA* sudah *SELESAI* dan siap diambil 🎉\n\n*No. Nota:* ${o.id}\n*Rincian:*\n${itemsText}\n*Total:* ${fmtRp(o.total)}\n*DP/Bayar:* ${fmtRp(o.dp || 0)}${infoBayar}\nSilakan diambil ya kak. Terima kasih 🙏`;
+      const url = wa ? `https://wa.me/${wa}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+      window.open(url, "_blank");
     };
 
     window.markPaid = (id) => {
